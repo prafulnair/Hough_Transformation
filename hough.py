@@ -10,47 +10,86 @@ import matplotlib.pyplot as plt
 from utils import create_line, create_mask
 
 
-def display_Stuff(image, edge1, edges_roi):
-    ## THIS IS MY STEP
-    ## DISPLAY THE RESULTS
-    fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(8, 3))
-
-    ax[0].imshow(image, cmap='gray')
-    ax[0].set_title('The IMage', fontsize=8)
-
-    ax[1].imshow(edge1, cmap='gray')
-    ax[1].set_title('Canny Edges sigma=1.5', fontsize=8)
-
-    ax[2].imshow(edges_roi, cmap='gray')
-    ax[2].set_title('Edges ROI', fontsize=8)
-
-    for a in ax:
-        a.axis('off')
-    fig.tight_layout()
-    plt.show()
-
 # load the input image
 image = imread('road.jpg', as_gray=True)
 
 # run Canny edge detector to find edge points
 edge1 = feature.canny(image)
 
-#display_Stuff(image, edge1)
+# display_Stuff(image, edge1)
 
 # create a mask for ROI by calling create_mask
 mask_roi = create_mask(edge1.shape[0], edge1.shape[1])
 
 # extract edge points in ROI by multipling edge map with the mask
 edges_roi = edge1 * mask_roi
-display_Stuff(image, edge1, edges_roi)
 
+# display_Stuff(image, edge1, edges_roi, mask_roi)
+
+
+## unperformed steps
+theta_res = 1
+rho_res = 1
+theta = np.deg2rad(np.arange(-90, 90, theta_res))
+diagonal_length = int(np.ceil(np.sqrt(
+    edges_roi.shape[0] ** 2 + edges_roi.shape[1] ** 2)))  # Adjusted to ceil to ensure covering all diagonal points
+rho = np.arange(-diagonal_length, diagonal_length, rho_res)
 
 # perform Hough transform
+accumulator_size_rho = len(rho)
+accumulator = np.zeros((accumulator_size_rho, len(theta)))
+
+## unperformed step
+edge_points = np.argwhere(edges_roi)
+
+for y, x in edge_points:
+    for t_idx, t in enumerate(theta):
+        rho_val = int(x * np.cos(t) + y * np.sin(t))
+        rho_idx = np.argmin(np.abs(rho - rho_val))
+        accumulator[rho_idx, t_idx] += 1
 
 # find the right lane by finding the peak in hough space
 
+# right_lane_theta, right_lane_rho = np.unravel_index(np.argmax(accumulator), accumulator.shape)
+
+max_idx = np.argmax(accumulator)
+rho_index, theta_idx = np.unravel_index(max_idx, accumulator.shape)
+rho_val = rho[rho_index]
+theta_val = theta[theta_idx]
+
 # zero out the values in accumulator around the neighborhood of the peak
+neighborhood_size = 50
+accumulator[max(0, rho_index - neighborhood_size):min(accumulator.shape[0], rho_index + neighborhood_size),
+max(0, theta_idx - neighborhood_size):min(accumulator.shape[1], theta_idx + neighborhood_size)] = 0
 
 # find the left lane by finding the peak in hough space
-
+max_idx = np.argmax(accumulator)
+rho_idx, theta_idx = np.unravel_index(max_idx, accumulator.shape)
+rho_val_left = rho[rho_idx]
+theta_val_left = theta[theta_idx]
 # plot the results
+
+fig, axes = plt.subplots(2, 2, figsize=(10, 10))
+axes = axes.ravel()
+# Plot original image
+axes[0].imshow(image)
+axes[0].set_title('Original Image')
+
+# Plot Canny edges
+axes[1].imshow(edge1, cmap='gray')
+axes[1].set_title('Canny Edges')
+
+# Plot edge points in ROI
+axes[2].imshow(edges_roi, cmap='gray')
+axes[2].set_title('Edges in ROI')
+
+# Plot detected lanes
+axes[3].imshow(image)
+axes[3].plot([0, image.shape[1]],
+             [rho_val / np.sin(theta_val), (rho_val - image.shape[1] * np.cos(theta_val)) / np.sin(theta_val)], 'b-')
+axes[3].plot([0, image.shape[1]], [rho_val_left / np.sin(theta_val_left),
+                                   (rho_val_left - image.shape[1] * np.cos(theta_val_left)) / np.sin(theta_val_left)],
+             'orange')
+axes[3].set_title('Detected Lanes')
+
+plt.show()
