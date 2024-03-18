@@ -27,21 +27,21 @@ edges_roi = edge1 * mask_roi
 # display_Stuff(image, edge1, edges_roi, mask_roi)
 
 
-## unperformed steps
+## new changes
 theta_res = 1
 rho_res = 1
 theta = np.deg2rad(np.arange(-90, 90, theta_res))
 diagonal_length = int(np.ceil(np.sqrt(
-    edges_roi.shape[0] ** 2 + edges_roi.shape[1] ** 2)))  # Adjusted to ceil to ensure covering all diagonal points
+    edges_roi.shape[0] ** 2 + edges_roi.shape[1] ** 2)))  # Adjusting to ceil to ensure covering all diagonal points
 rho = np.arange(-diagonal_length, diagonal_length, rho_res)
 
 # perform Hough transform
 accumulator_size_rho = len(rho)
 accumulator = np.zeros((accumulator_size_rho, len(theta)))
 
-## unperformed step
-edge_points = np.argwhere(edges_roi)
 
+edge_points = np.argwhere(edges_roi)
+# updating the accumulator
 for y, x in edge_points:
     for t_idx, t in enumerate(theta):
         rho_val = int(x * np.cos(t) + y * np.sin(t))
@@ -57,7 +57,7 @@ rho_index, theta_idx = np.unravel_index(max_idx, accumulator.shape)
 rho_val = rho[rho_index]
 theta_val = theta[theta_idx]
 
-# zero out the values in accumulator around the neighborhood of the peak
+# zero out the values in accumulator around the neighborhood of the peak (NMS basically)
 neighborhood_size = 50
 accumulator[max(0, rho_index - neighborhood_size):min(accumulator.shape[0], rho_index + neighborhood_size),
 max(0, theta_idx - neighborhood_size):min(accumulator.shape[1], theta_idx + neighborhood_size)] = 0
@@ -72,36 +72,37 @@ theta_val_left = theta[theta_idx]
 fig, axes = plt.subplots(2, 2, figsize=(10, 10))
 axes = axes.ravel()
 # Plot original image
-axes[0].imshow(image)
-axes[0].set_title('Original Image')
+axes[0].imshow(edge1, cmap='gray')
+axes[0].set_title('Edges')
 
 # Plot Canny edges
-axes[1].imshow(edge1, cmap='gray')
-axes[1].set_title('Canny Edges')
+axes[1].imshow(edges_roi, cmap='gray')
+axes[1].set_title('Edges in ROI')
 
 # Plot edge points in ROI
-axes[2].imshow(edges_roi, cmap='gray')
-axes[2].set_title('Edges in ROI')
+axes[2].imshow(mask_roi, cmap='gray')
+axes[2].set_title('mask')
 
 # Plot detected lanes
 
 axes[3].imshow(image)
 
-# Plot right lane (only half)
+# Plot right lane
 x1_right = image.shape[1]
 y1_right = int((rho_val - x1_right * np.cos(theta_val)) / np.sin(theta_val))
-x2_right = image.shape[1] // 2  # Limit to half the width of the image
+x2_right = image.shape[1] // 2
 
 y2_right = int((rho_val - x2_right * np.cos(theta_val)) / np.sin(theta_val))
+
+
 axes[3].plot([x1_right, x2_right], [y1_right, y2_right], 'b-')
 
-# Plot left lane (only half)
-x1_left = 0
+# Plot left lane
+x1_left = 160
 y1_left = int((rho_val_left - x1_left * np.cos(theta_val_left)) / np.sin(theta_val_left))
-x2_left = image.shape[1] // 2  # Limit to half the width of the image
+x2_left = image.shape[1] // 2
 y2_left = int((rho_val_left - x2_left * np.cos(theta_val_left)) / np.sin(theta_val_left))
-# y1_left = y1_left // 2  # Adjust y-coordinate to only plot half
-# y2_left = y2_left // 2  # Adjust y-coordinate to only plot half
+
 axes[3].plot([x1_left, x2_left], [y1_left, y2_left], 'orange')
 
 axes[3].set_title('Detected Lanes')
