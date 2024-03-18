@@ -84,12 +84,26 @@ axes[2].imshow(edges_roi, cmap='gray')
 axes[2].set_title('Edges in ROI')
 
 # Plot detected lanes
+
 axes[3].imshow(image)
-axes[3].plot([0, image.shape[1]],
-             [rho_val / np.sin(theta_val), (rho_val - image.shape[1] * np.cos(theta_val)) / np.sin(theta_val)], 'b-')
-axes[3].plot([0, image.shape[1]], [rho_val_left / np.sin(theta_val_left),
-                                   (rho_val_left - image.shape[1] * np.cos(theta_val_left)) / np.sin(theta_val_left)],
-             'orange')
+
+# Plot right lane (only half)
+x1_right = image.shape[1]
+y1_right = int((rho_val - x1_right * np.cos(theta_val)) / np.sin(theta_val))
+x2_right = image.shape[1] // 2  # Limit to half the width of the image
+
+y2_right = int((rho_val - x2_right * np.cos(theta_val)) / np.sin(theta_val))
+axes[3].plot([x1_right, x2_right], [y1_right, y2_right], 'b-')
+
+# Plot left lane (only half)
+x1_left = 0
+y1_left = int((rho_val_left - x1_left * np.cos(theta_val_left)) / np.sin(theta_val_left))
+x2_left = image.shape[1] // 2  # Limit to half the width of the image
+y2_left = int((rho_val_left - x2_left * np.cos(theta_val_left)) / np.sin(theta_val_left))
+# y1_left = y1_left // 2  # Adjust y-coordinate to only plot half
+# y2_left = y2_left // 2  # Adjust y-coordinate to only plot half
+axes[3].plot([x1_left, x2_left], [y1_left, y2_left], 'orange')
+
 axes[3].set_title('Detected Lanes')
 
 plt.show()
